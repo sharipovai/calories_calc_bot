@@ -96,7 +96,7 @@ def add_food_from_code4(message, product_info, step, code, meal_type):
          2: ["Введите количество белков в 100г продукта", 'Белки'],
          3: ["Введите количество жиров в 100г продукта", 'Жиры'],
          4: ["Введите количество углеводов в 100г продукта", 'Углеводы'],
-         5: ["Введите калорийность на 100г продукта", 'Калорийность']}
+         5: ["Введите калорийность ккал на 100г продукта", 'Калорийность']}
     if message.text is None:
         bot.send_message(message.chat.id, f'Текст сообщения пустой. {d[step][0]}')
         return bot.register_next_step_handler(message, add_food_from_code4, product_info, step, code, meal_type)
@@ -302,12 +302,23 @@ def wait_command1(message):
         return stat(message)
     elif message.text.lower() == 'питание сегодня':
         today_food = db.get_today_food_information(message.from_user.id)
+        total = {'Белки': 0, 'Углеводы': 0, 'Жиры': 0, 'Калорийность': 0}
         text = ""
-        for data in today_food:
-            for key, value in data.items():
-                text +=f"{key}: {value}\n"
-            text += "\n"
-        bot.send_message(message.chat.id, f'Вы сегодня съели:\n{text}')
+        for type_of_meal in today_food.keys():
+            text += f"<b>{type_of_meal}</b>\n\n"
+            for data in today_food[type_of_meal]:
+                for key, value in data.items():
+                    if key in total.keys():
+                        total[key] += int(value.split(" ")[0])
+                    if key != 'Наименование':
+                        text +=f"{key}: {value}\n"
+                    else:
+                        text += f"{value}\n"
+                text += "\n"
+        text += "Всего за день:\n"
+        for key, value in total.items():
+            text += f"{key}: {value}\n"
+        bot.send_message(message.chat.id, f'Вы сегодня съели:\n{text}', parse_mode='html')
         return wait_command(message)
     elif message.text.lower() == 'все мое питание':
         result = db.get_total_food_information(message.from_user.id)
@@ -364,8 +375,8 @@ def info(message, meal_type):
         bot.send_message(message.chat.id, f'Сфотографируй штрихкод продукта')
         return bot.register_next_step_handler(message, add_food_from_code, meal_type)
     elif message.text.lower() == 'текст':
-        mes = bot.send_message(message.chat.id, f'Пожалуйста подождите')
-        return llm_text(message, mes, meal_type)
+        bot.send_message(message.chat.id, f'Введите текстовое описание вашего приема пищи')
+        return bot.register_next_step_handler(message, get_food_text, meal_type)
     else:
         bot.send_message(message.chat.id, 'Ошибка! Неверная команда')
         return wait_command3(message, meal_type)
@@ -375,8 +386,16 @@ def get_food_photo(message, meal_type):
         mes = bot.send_message(message.chat.id, f'Пожалуйста подождите')
         return llm_photo(message, mes, meal_type)
     else:
-        bot.send_message(message.chat.id, 'Ошибка! Фото не найдено.')
+        bot.send_message(message.chat.id, 'Ошибка! Фото не найдено')
         return wait_command3(message, meal_type)
+
+def get_food_text(message, meal_type):
+    if message.text is None:
+        bot.send_message(message.chat.id, 'Ошибка! В сообщении отсутствует текст')
+        return wait_command3(message, meal_type)
+    else:
+        mes = bot.send_message(message.chat.id, f'Пожалуйста подождите')
+        return llm_text(message, mes, meal_type)
 
 
 def llm_photo(message, mes, meal_type):

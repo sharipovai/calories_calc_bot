@@ -1,4 +1,5 @@
 import sqlite3
+from collections import defaultdict
 from datetime import datetime
 import pandas as pd
 
@@ -122,8 +123,8 @@ class Database:
         today_date = datetime.now().strftime("%d.%m.%y")
         cur.execute(
             "INSERT INTO food (user_id, type_of_meal, food_name, protein, carbohydrates, fats, total_calories, date) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (user_id, food_name, protein, carbohydrates, fats, total_calories, today_date)
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (user_id, type_of_meal, food_name, protein, carbohydrates, fats, total_calories, today_date)
         )
         conn.commit()
         cur.close()
@@ -172,9 +173,9 @@ class Database:
                              "food WHERE user_id = ? AND date = ?", (user_id, today_date)).fetchall()
         cur.close()
         conn.close()
-        renamed = []
+        renamed = defaultdict(list)
         for row in result:
-            renamed.append({
+            renamed[row["type_of_meal"]].append({
                 "Наименование": row["food_name"],
                 "Белки": str(row["protein"]) + " г.",
                 "Углеводы": str(row["carbohydrates"]) + " г.",
@@ -190,15 +191,14 @@ class Database:
         df = pd.read_sql_query(script, conn)
         user_df = df.loc[df['user_id'] == user_id]
         user_df = user_df.drop(columns=['user_id', 'food_id'])
-        group_column = user_df.columns[-1]
-        result = user_df.groupby(group_column).agg({
+        group_column = ['type_of_meal', 'date']
+        result = user_df.groupby(group_column, as_index=False).agg({
             'food_name': lambda x: ', '.join(x),
-            'type_of_meal': lambda x: ', '.join(x),
             'protein': 'sum',
             'carbohydrates': 'sum',
             'fats': 'sum',
             'total_calories': 'sum'
-        }).reset_index()
+        })
         conn.close()
         return result
 
