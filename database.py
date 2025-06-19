@@ -16,8 +16,9 @@ class Database:
             "CREATE TABLE IF NOT EXISTS statistics (number INTEGER PRIMARY KEY AUTOINCREMENT, date varchar(20), "
             "user_id varchar(5000), new_user int, unique_users int)")
         cur.execute(
-            "CREATE TABLE IF NOT EXISTS food (food_id INTEGER PRIMARY KEY AUTOINCREMENT, user_id int, "
-            "food_name varchar(50), protein int, carbohydrates int, fats int, total_calories int, date varchar(20))")
+            "CREATE TABLE IF NOT EXISTS food (food_id INTEGER PRIMARY KEY AUTOINCREMENT, user_id int, type_of_meal "
+            "varchar(50), food_name varchar(50), protein int, carbohydrates int, fats int, total_calories int, "
+            "date varchar(20))")
         cur.execute(
             "CREATE TABLE IF NOT EXISTS food_codes (code INTEGER PRIMARY KEY, "
             "food_name varchar(50), protein real, carbohydrates real, fats real, total_calories real, date varchar(20))")
@@ -115,12 +116,12 @@ class Database:
         conn.close()
         return chat_id_list
 
-    def add_new_food(self, user_id, food_name, protein, carbohydrates, fats, total_calories):
+    def add_new_food(self, user_id, type_of_meal, food_name, protein, carbohydrates, fats, total_calories):
         conn = sqlite3.connect(self.db_path)
         cur = conn.cursor()
         today_date = datetime.now().strftime("%d.%m.%y")
         cur.execute(
-            "INSERT INTO food (user_id, food_name, protein, carbohydrates, fats, total_calories, date) "
+            "INSERT INTO food (user_id, type_of_meal, food_name, protein, carbohydrates, fats, total_calories, date) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
             (user_id, food_name, protein, carbohydrates, fats, total_calories, today_date)
         )
@@ -167,8 +168,8 @@ class Database:
         today_date = datetime.now().strftime("%d.%m.%y")
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
-        result = cur.execute("SELECT food_name, protein, carbohydrates, fats, total_calories FROM "
-                             "food WHERE user_id = ? AND date = ?", (user_id,today_date)).fetchall()
+        result = cur.execute("SELECT food_name, type_of_meal, protein, carbohydrates, fats, total_calories FROM "
+                             "food WHERE user_id = ? AND date = ?", (user_id, today_date)).fetchall()
         cur.close()
         conn.close()
         renamed = []
@@ -192,6 +193,7 @@ class Database:
         group_column = user_df.columns[-1]
         result = user_df.groupby(group_column).agg({
             'food_name': lambda x: ', '.join(x),
+            'type_of_meal': lambda x: ', '.join(x),
             'protein': 'sum',
             'carbohydrates': 'sum',
             'fats': 'sum',
