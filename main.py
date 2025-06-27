@@ -399,6 +399,11 @@ def get_food_text(message, meal_type):
 
 
 def llm_photo(message, mes, meal_type):
+    mes_text = message.caption
+    if mes_text is None:
+        gemini_text = config.img_prompt
+    else:
+        gemini_text = "Описание фото: " + mes_text + ". " + config.img_prompt
     file_id = message.photo[-1].file_id
     file_info = bot.get_file(file_id)
     downloaded_file = bot.download_file(file_info.file_path)
@@ -417,7 +422,7 @@ def llm_photo(message, mes, meal_type):
         model="gemini-2.0-flash",
         contents=[
             gemini_file,
-            config.img_prompt  # или config.prompt
+            gemini_text
         ]
     )
     result = parse_nutrition(response.text)
